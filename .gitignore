@@ -206,5 +206,12 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 "data/world_trade_data_enriched.csv"
-*.csv
 *.json
+
+*.csv
+
+# Tracked CSV files (negate specific ones needed for the project)
+!outputs/*.csv
+!data/res/evaluation/*.csv
+!data/res/classification_results.csv
+!data/res/algeria_export_forecast_2025_2027.csv
