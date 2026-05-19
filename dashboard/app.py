@@ -1,3 +1,6 @@
+#before running this code make sure that you have two files for clustering results in outputs folder to visualize the clustering results and ... to visualize forecasting results if you don't have them you run the notebooks only to generate them
+# ../outputs/country_cluster_profiles.csv 
+# ../outputs/product_cluster_profiles.csv
 import os
 import warnings
 warnings.filterwarnings('ignore')
@@ -6,7 +9,6 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-import random
 from dash import Dash, dcc, html, Input, Output, dash_table
 import dash_bootstrap_components as dbc
 
@@ -66,6 +68,11 @@ alg_yearly = load_csv('algeria_yearly.csv')
 sector_demand_index = load_csv('sector_demand_index.csv')
 pca_sample = load_csv('pca_sample.csv')
 feature_corr = load_csv('feature_correlation.csv')
+country_clusters = load_csv('country_clusters.csv')
+product_clusters = load_csv('product_clusters.csv')
+cluster_stats = load_csv('cluster_statistics.csv')
+cluster_sector_comp = load_csv('cluster_sector_composition.csv')
+forecast_data = load_csv('forecast_data.csv')
 
 if not summary_stats.empty:
     stats_dict = dict(zip(summary_stats['metric'], summary_stats['value']))
@@ -263,10 +270,56 @@ def build_explorer():
 
 def build_forecasts():
     has_eval = not cmp_t1.empty
+    has_forecast = not forecast_data.empty
+
     def sec(title):
         return html.Div(className='section-header', children=[
             html.Div(className='accent'),
             html.H5(title),
+        ])
+
+    fc_section = html.Div()
+    if has_forecast:
+        top_pairs = forecast_data.groupby(['importer', 'product']).size().reset_index()
+        fig_fc = go.Figure()
+        for _, row in top_pairs.head(10).iterrows():
+            imp, prod = row['importer'], row['product']
+            pair = forecast_data[(forecast_data['importer'] == imp) & (forecast_data['product'] == prod)]
+            fig_fc.add_trace(go.Scatter(
+                x=pair['year'], y=pair['forecast_algeria_export_v'],
+                mode='lines+markers', name=f'I{imp}-P{prod}',
+                line=dict(width=2),
+            ))
+        fig_fc.update_layout(
+            template='plotly_white', hovermode='x unified',
+            margin=dict(t=15, b=10, l=10, r=10),
+            yaxis=dict(tickformat='.2s'),
+            title=dict(text='Top 10 (Importer, Product) Pairs — Algeria Export Forecast 2025-2027', font=dict(size=13, weight=700)),
+            legend=dict(font=dict(size=9), orientation='h', y=1.02),
+        )
+        fc_section = dbc.Row([
+            dbc.Col(dbc.Card(dbc.CardBody([dcc.Graph(figure=fig_fc, style={'height': '400px'})]), className=''), xs=12, lg=8, className='mb-4'),
+            dbc.Col(html.Div(className='info-panel', children=[
+                html.H5('Forecast Summary'),
+                html.P(f'{len(forecast_data)} forecast rows for 2025-2027', className='text-muted', style={'fontSize': '0.85rem'}),
+                html.P('Prophet + LSTM hybrid model', className='text-muted', style={'fontSize': '0.85rem'}),
+                html.P('Upper/lower bounds at 80% confidence', className='text-muted', style={'fontSize': '0.85rem'}),
+            ]), xs=12, lg=4, className='mb-4'),
+        ])
+    else:
+        fc_section = dbc.Row([
+            dbc.Col(dbc.Card(dbc.CardBody([
+                html.Div([
+                    html.Div(lucide('alert-triangle'), className='pending-icon', style={'backgroundColor': '#fef3c7', 'color': '#ca8a04', 'borderRadius': '12px', 'width': '48px', 'height': '48px', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center', 'flexShrink': 0, 'marginRight': '1rem'}),
+                    html.Div([
+                        html.H5('Forecast Data Not Yet Available', className='fw-bold', style={'color': '#ca8a04', 'margin': 0}),
+                        html.P('Run the forecasting notebooks to generate 2025-2027 predictions, then re-run prepare_data.py.', className='text-muted mt-1', style={'fontSize': '0.85rem'}),
+                    ]),
+                ], style={'display': 'flex', 'alignItems': 'flex-start'}),
+                html.Hr(),
+                html.Code('notebooks/full_forecasting.ipynb', style={'display': 'block', 'padding': '10px', 'backgroundColor': '#f1f5f9', 'borderRadius': '6px', 'fontSize': '0.85rem'}),
+                html.P(['Once done, re-run ', html.Code('python dashboard/prepare_data.py'), ' to include forecast data in this dashboard.'], className='text-muted mt-2', style={'fontSize': '0.85rem'}),
+            ]), className='', style={'borderLeft': '4px solid #ca8a04'}), xs=12, className='mb-2'),
         ])
 
     return html.Div([
@@ -324,7 +377,7 @@ def build_forecasts():
                 ]),
             ]), xs=12, lg=6, className='mb-4'),
         ]),
-        sec('Historical Trend'),
+        sec('Historical + Forecast Trend'),
         dbc.Row([
             dbc.Col(dbc.Card(dbc.CardBody([
                 dcc.Graph(
@@ -340,20 +393,7 @@ def build_forecasts():
             ]), className=''), xs=12, className='mb-4'),
         ]),
         sec('Generate Forecast'),
-        dbc.Row([
-            dbc.Col(dbc.Card(dbc.CardBody([
-                html.Div([
-                    html.Div(lucide('alert-triangle'), className='pending-icon', style={'backgroundColor': '#fef3c7', 'color': '#ca8a04', 'borderRadius': '12px', 'width': '48px', 'height': '48px', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center', 'flexShrink': 0, 'marginRight': '1rem'}),
-                    html.Div([
-                        html.H5('Forecast Data Not Yet Available', className='fw-bold', style={'color': '#ca8a04', 'margin': 0}),
-                        html.P('Run the forecasting notebooks to generate 2025-2027 predictions, then re-run prepare_data.py.', className='text-muted mt-1', style={'fontSize': '0.85rem'}),
-                    ]),
-                ], style={'display': 'flex', 'alignItems': 'flex-start'}),
-                html.Hr(),
-                html.Code('notebooks/full_forecasting.ipynb', style={'display': 'block', 'padding': '10px', 'backgroundColor': '#f1f5f9', 'borderRadius': '6px', 'fontSize': '0.85rem'}),
-                html.P(['Once done, re-run ', html.Code('python dashboard/prepare_data.py'), ' to include forecast data in this dashboard.'], className='text-muted mt-2', style={'fontSize': '0.85rem'}),
-            ]), className='', style={'borderLeft': '4px solid #ca8a04'}), xs=12, className='mb-2'),
-        ]),
+        fc_section,
     ])
 
 
@@ -416,26 +456,9 @@ def build_opportunities():
     ])
 
 
-def build_intelligence():
-    pca_fig = go.Figure()
-    opp_colors_map = {'High': '#16a34a', 'Medium': '#ca8a04', 'Low': '#dc2626'}
-    if not pca_sample.empty and 'opportunity_label' in pca_sample.columns:
-        pca_sample['opp_label'] = pca_sample['opportunity_label'].map({0: 'Low', 1: 'Medium', 2: 'High'})
-        for lbl, grp in pca_sample.groupby('opp_label'):
-            xs = np.random.randn(len(grp)) * 0.1
-            ys = np.random.randn(len(grp)) * 0.1
-            pca_fig.add_trace(go.Scatter(
-                x=xs, y=ys, mode='markers',
-                name=lbl, marker=dict(color=opp_colors_map.get(lbl, '#64748b'), size=3, opacity=0.3),
-                showlegend=True
-            ))
-        pca_fig.update_layout(
-            template='plotly_white', margin=dict(t=30, b=10, l=10, r=10),
-            title=dict(text='Feature Space Overview (PCA)', font=dict(size=13, weight=700)),
-            xaxis_title='PC1', yaxis_title='PC2',
-            legend=dict(font=dict(size=10), orientation='h', y=1.02),
-        )
+CLUSTER_COLORS = ['#3a7abf', '#1d9e75', '#d64e4e', '#e09c3b', '#9b59b6', '#e67e22', '#1abc9c', '#d33ce7']
 
+def build_intelligence():
     corr_fig = go.Figure()
     if not feature_corr.empty:
         corr_fig.add_trace(go.Heatmap(
@@ -453,38 +476,136 @@ def build_intelligence():
             height=620,
         )
 
+    country_scatter = go.Figure()
+    if not country_clusters.empty:
+        for cid in sorted(country_clusters['country_cluster'].unique()):
+            grp = country_clusters[country_clusters['country_cluster'] == cid]
+            desc = cluster_stats[(cluster_stats['type'] == 'country') & (cluster_stats['cluster_id'] == cid)]['description'].iloc[0] if not cluster_stats.empty else f'Cluster {cid}'
+            country_scatter.add_trace(go.Scatter(
+                x=grp['PC1'], y=grp['PC2'], mode='markers',
+                name=f'{desc} ({len(grp)})',
+                marker=dict(color=CLUSTER_COLORS[cid % len(CLUSTER_COLORS)], size=7, opacity=0.8, line=dict(width=1, color='white')),
+                hovertemplate='Importer: %{text}<extra></extra>',
+                text=grp['importer'].astype(str),
+            ))
+        country_scatter.update_layout(
+            template='plotly_white', margin=dict(t=25, b=10, l=10, r=10),
+            title=dict(text='Country Market Clusters (K-Means K=8)', font=dict(size=13, weight=700)),
+            xaxis_title='PC1 — Market Size & Economic Weight',
+            yaxis_title='PC2 — Gravity & Relationship Strength',
+            legend=dict(font=dict(size=9), orientation='v', y=0.5),
+            height=400,
+        )
+
+    product_scatter = go.Figure()
+    if not product_clusters.empty:
+        for cid in sorted(product_clusters['product_cluster'].unique()):
+            grp = product_clusters[product_clusters['product_cluster'] == cid]
+            desc = cluster_stats[(cluster_stats['type'] == 'product') & (cluster_stats['cluster_id'] == cid)]['description'].iloc[0] if not cluster_stats.empty else f'Cluster {cid}'
+            product_scatter.add_trace(go.Scatter(
+                x=grp['PC1'], y=grp['PC2'], mode='markers',
+                name=f'{desc} ({len(grp)})',
+                marker=dict(color=CLUSTER_COLORS[cid % len(CLUSTER_COLORS)], size=4, opacity=0.5, line=dict(width=0.5, color='white')),
+                hovertemplate='Product: %{text}<extra></extra>',
+                text=grp['product'].astype(str),
+            ))
+        product_scatter.update_layout(
+            template='plotly_white', margin=dict(t=25, b=10, l=10, r=10),
+            title=dict(text='Product Clusters (K-Means K=5)', font=dict(size=13, weight=700)),
+            xaxis_title='PC1',
+            yaxis_title='PC2',
+            legend=dict(font=dict(size=9), orientation='v', y=0.5),
+            height=400,
+        )
+
+    sector_fig = go.Figure()
+    if not cluster_sector_comp.empty:
+        pivot = cluster_sector_comp.pivot(index='sector', columns='product_cluster', values='count').fillna(0)
+        pivot = pivot.loc[pivot.sum(axis=1).sort_values(ascending=False).index]
+        for cid in sorted(pivot.columns):
+            desc = cluster_stats[(cluster_stats['type'] == 'product') & (cluster_stats['cluster_id'] == cid)]['description'].iloc[0] if not cluster_stats.empty else f'C{cid}'
+            sector_fig.add_trace(go.Bar(
+                x=pivot.index, y=pivot[cid], name=desc,
+                marker_color=CLUSTER_COLORS[cid % len(CLUSTER_COLORS)],
+            ))
+        sector_fig.update_layout(
+            barmode='stack', template='plotly_white', margin=dict(t=30, b=100, l=10, r=10),
+            title=dict(text='Sector Composition by Product Cluster', font=dict(size=13, weight=700)),
+            xaxis=dict(tickangle=-45, tickfont=dict(size=9)),
+            yaxis_title='Number of Products',
+            legend=dict(font=dict(size=9), orientation='h', y=1.02),
+            height=420,
+        )
+
+    has_clustering = not country_clusters.empty
+
     def sec(title):
         return html.Div(className='section-header', children=[
             html.Div(className='accent'),
             html.H5(title),
         ])
 
-    return html.Div([
+    children = [
         sec('Feature Analysis'),
         dbc.Row([
             dbc.Col(dbc.Card(dbc.CardBody([
                 dcc.Graph(figure=corr_fig, style={'height': '640px'}),
+            ]), className=''), xs=12, lg=12, className='mb-4'),
+        ]),
+    ]
+
+    if has_clustering:
+        children.append(sec('Clustering Results'))
+        children.append(dbc.Row([
+            dbc.Col(dbc.Card(dbc.CardBody([
+                dcc.Graph(figure=country_scatter, style={'height': '420px'}),
+            ]), className=''), xs=12, lg=6, className='mb-4'),
+            dbc.Col(dbc.Card(dbc.CardBody([
+                dcc.Graph(figure=product_scatter, style={'height': '420px'}),
+            ]), className=''), xs=12, lg=6, className='mb-4'),
+        ]))
+        children.append(dbc.Row([
+            dbc.Col(dbc.Card(dbc.CardBody([
+                dcc.Graph(figure=sector_fig, style={'height': '440px'}),
             ]), className=''), xs=12, lg=7, className='mb-4'),
             dbc.Col([
                 dbc.Card(dbc.CardBody([
-                    dcc.Graph(figure=pca_fig, style={'height': '380px'}),
+                    html.H5('Cluster Statistics', style={'fontWeight': 700, 'fontSize': '0.9rem', 'marginBottom': '0.75rem'}),
+                    dash_table.DataTable(
+                        id='cluster-stats-table',
+                        columns=[
+                            {'name': 'Type', 'id': 'type'},
+                            {'name': 'Cluster', 'id': 'cluster_id'},
+                            {'name': 'Count', 'id': 'count'},
+                            {'name': 'Description', 'id': 'description'},
+                        ],
+                        data=cluster_stats.to_dict('records') if not cluster_stats.empty else [],
+                        style_table={'overflowX': 'auto'},
+                        style_header={'backgroundColor': '#1e293b', 'color': 'white', 'fontWeight': 600, 'fontSize': '0.8rem'},
+                        style_cell={'textAlign': 'left', 'padding': '8px', 'fontSize': '0.8rem'},
+                        style_data_conditional=[
+                            {'if': {'column_id': 'type'}, 'fontWeight': 600, 'textTransform': 'capitalize'},
+                        ],
+                    ),
                     html.Hr(style={'margin': '0.75rem 0'}),
-                    html.P('21 numeric features → 16 PCA components (92.6% variance)', className='text-muted', style={'fontSize': '0.8rem', 'margin': 0}),
-                    html.P('Placeholder plot — run full PCA pipeline for live projection.', className='text-muted', style={'fontSize': '0.8rem'}),
-                ]), className='mb-4'),
-                dbc.Card(dbc.CardBody([
-                    html.H5('Key Insights', style={'fontWeight': 700, 'fontSize': '0.9rem', 'marginBottom': '0.75rem'}),
-                    html.Ul(style={'paddingLeft': '1.1rem', 'fontSize': '0.83rem', 'lineHeight': '1.9', 'margin': 0}, children=[
-                        html.Li('PC1 captures market size & economic weight'),
-                        html.Li('PC2 separates gravity features (distance, language)'),
-                        html.Li('PC3-4: trade openness & per-capita income'),
-                        html.Li('Language/cultural proximity spreads across PC1, PC5-6'),
+                    html.Div([
+                        html.P([
+                            html.Strong('Method: '), 'K-Means clustering on 16 PCA components. ',
+                            'Countries clustered into 8 groups (K=8, silhouette=0.35). ',
+                            'Products clustered into 5 groups (K=5, silhouette=0.41).',
+                        ], style={'fontSize': '0.8rem', 'color': '#475569', 'margin': 0}),
+                        html.P([
+                            html.Strong('Key Insight: '),
+                            'Product clusters show highly differentiated opportunity distributions — ',
+                            'Cluster 2 (Strategic Commodities) is 72% High-opportunity, while Cluster 0 (Low-Value) is only 12% High.',
+                        ], style={'fontSize': '0.8rem', 'color': '#475569', 'margin': '0.5rem 0 0 0'}),
                     ]),
-                ]), className=''),
+                ]), className='mb-4'),
             ], xs=12, lg=5, className='mb-4'),
-        ]),
-        sec('Clustering & Classification'),
-        dbc.Row([
+        ]))
+    else:
+        children.append(sec('Clustering & Classification'))
+        children.append(dbc.Row([
             dbc.Col(html.Div(className='info-panel', children=[
                 html.H5('Model Status'),
                 html.Div(className='pending-box', style={'borderLeft': '4px solid #7c3aed'}, children=[
@@ -492,46 +613,47 @@ def build_intelligence():
                         html.Div(lucide('puzzle'), className='pending-icon', style={'backgroundColor': '#f3e8ff', 'color': '#7c3aed', 'borderRadius': '8px', 'width': '38px', 'height': '38px', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center', 'flexShrink': 0}),
                         html.Div([
                             html.Strong('Clustering Results', style={'fontSize': '0.9rem'}),
-                            html.P('Not yet integrated.', className='text-muted', style={'fontSize': '0.8rem', 'margin': '0.2rem 0'}),
+                            html.P('Not yet available.', className='text-muted', style={'fontSize': '0.8rem', 'margin': '0.2rem 0'}),
                             html.Span('Pending', className='badge bg-warning'),
                         ]),
                     ], style={'display': 'flex', 'alignItems': 'flex-start'}),
-                    html.Hr(style={'margin': '0.75rem 0'}),
-                    html.Div([
-                        html.Small('Expected file: ', style={'color': '#64748b'}),
-                        html.Code('data/res/cluster_labels.csv', style={'fontSize': '0.8rem'}),
-                    ]),
-                    html.Small('Columns: importer, product, cluster_id, cluster_name', style={'color': '#94a3b8', 'display': 'block', 'marginTop': '0.25rem'}),
-                ]),
-                html.Div(className='pending-box', style={'borderLeft': '4px solid #1a56db', 'marginBottom': 0}, children=[
-                    html.Div([
-                        html.Div(lucide('tag'), className='pending-icon', style={'backgroundColor': '#e0f2fe', 'color': '#1a56db', 'borderRadius': '8px', 'width': '38px', 'height': '38px', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center', 'flexShrink': 0}),
-                        html.Div([
-                            html.Strong('Classification Results', style={'fontSize': '0.9rem'}),
-                            html.P('Not yet integrated.', className='text-muted', style={'fontSize': '0.8rem', 'margin': '0.2rem 0'}),
-                            html.Span('Pending', className='badge bg-warning'),
-                        ]),
-                    ], style={'display': 'flex', 'alignItems': 'flex-start'}),
-                    html.Hr(style={'margin': '0.75rem 0'}),
-                    html.Div([
-                        html.Small('Expected file: ', style={'color': '#64748b'}),
-                        html.Code('data/res/classification_results.csv', style={'fontSize': '0.8rem'}),
-                    ]),
-                    html.Small('Columns: importer, product, opportunity_label (High/Medium/Low)', style={'color': '#94a3b8', 'display': 'block', 'marginTop': '0.25rem'}),
                 ]),
             ]), xs=12, lg=6, className='mb-4'),
-            dbc.Col(html.Div(className='info-panel', children=[
-                html.H5('Integration Instructions'),
-                html.Ol(style={'paddingLeft': '1.1rem', 'fontSize': '0.85rem', 'lineHeight': '2'}, children=[
-                    html.Li('Run your clustering/classification notebooks to produce CSV outputs'),
-                    html.Li(['Save results to ', html.Code('data/res/cluster_labels.csv'), ' and ', html.Code('data/res/classification_results.csv')]),
-                    html.Li(['Re-run: ', html.Code('python dashboard/prepare_data.py')]),
-                    html.Li('The dashboard will automatically detect and display your results'),
+        ]))
+
+    children.append(sec('Classification'))
+    children.append(dbc.Row([
+        dbc.Col(html.Div(className='info-panel', children=[
+            html.Div(className='pending-box', style={'borderLeft': '4px solid #1a56db', 'marginBottom': 0}, children=[
+                html.Div([
+                    html.Div(lucide('tag'), className='pending-icon', style={'backgroundColor': '#e0f2fe', 'color': '#1a56db', 'borderRadius': '8px', 'width': '38px', 'height': '38px', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center', 'flexShrink': 0}),
+                    html.Div([
+                        html.Strong('Classification Results', style={'fontSize': '0.9rem'}),
+                        html.P('Awaiting teammate integration.', className='text-muted', style={'fontSize': '0.8rem', 'margin': '0.2rem 0'}),
+                        html.Span('Pending', className='badge bg-warning'),
+                    ]),
+                ], style={'display': 'flex', 'alignItems': 'flex-start'}),
+                html.Hr(style={'margin': '0.75rem 0'}),
+                html.Div([
+                    html.Small('Expected file: ', style={'color': '#64748b'}),
+                    html.Code('data/res/classification_results.csv', style={'fontSize': '0.8rem'}),
                 ]),
-                html.P(['See ', html.Code('dashboard/INTEGRATION_GUIDE.md'), ' for detailed instructions.'], className='text-muted mt-2', style={'fontSize': '0.8rem'}),
-            ]), xs=12, lg=6, className='mb-4'),
-        ]),
-    ])
+                html.Small('Columns: importer, product, opportunity_label (High/Medium/Low)', style={'color': '#94a3b8', 'display': 'block', 'marginTop': '0.25rem'}),
+            ]),
+        ]), xs=12, lg=6, className='mb-4'),
+        dbc.Col(html.Div(className='info-panel', children=[
+            html.H5('Integration Instructions'),
+            html.Ol(style={'paddingLeft': '1.1rem', 'fontSize': '0.85rem', 'lineHeight': '2'}, children=[
+                html.Li('Run your classification notebook to produce a CSV with predictions'),
+                html.Li(['Save the file to ', html.Code('data/res/classification_results.csv')]),
+                html.Li(['Re-run: ', html.Code('python dashboard/prepare_data.py')]),
+                html.Li('The dashboard will automatically display your classification results alongside clustering'),
+            ]),
+            html.P(['See ', html.Code('dashboard/INTEGRATION_GUIDE.md'), ' for detailed format specifications.'], className='text-muted mt-2', style={'fontSize': '0.8rem'}),
+        ]), xs=12, lg=6, className='mb-4'),
+    ]))
+
+    return html.Div(children)
 
 
 @app.callback(
