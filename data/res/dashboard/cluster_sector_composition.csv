@@ -1,0 +1,66 @@
+product_cluster,sector,count
+0,Agriculture & Food,100
+0,Arms & Ammunition,1
+0,Chemicals,131
+0,Energy & Hydrocarbons,4
+0,Footwear & Headgear,11
+0,Furniture & Misc,21
+0,Instruments & Optics,32
+0,Machinery & Equipment,72
+0,Metals & Metal Products,96
+0,Minerals & Raw Materials,18
+0,Plastics & Rubber,27
+0,Precious Metals & Gems,3
+0,"Stone, Glass & Ceramics",36
+0,Textiles & Clothing,95
+0,Transport,13
+0,"Wood, Paper & Leather",54
+1,Agriculture & Food,7
+1,Chemicals,5
+1,Energy & Hydrocarbons,1
+1,Footwear & Headgear,1
+1,Furniture & Misc,1
+1,Instruments & Optics,3
+1,Machinery & Equipment,18
+1,Metals & Metal Products,2
+1,Minerals & Raw Materials,2
+1,Plastics & Rubber,4
+1,Textiles & Clothing,2
+1,Transport,1
+1,"Wood, Paper & Leather",5
+2,Chemicals,1
+2,Energy & Hydrocarbons,2
+2,Machinery & Equipment,3
+2,Precious Metals & Gems,1
+2,Transport,2
+3,Agriculture & Food,43
+3,Arms & Ammunition,6
+3,Arts & Antiques,5
+3,Chemicals,22
+3,Energy & Hydrocarbons,7
+3,Footwear & Headgear,3
+3,Instruments & Optics,4
+3,Machinery & Equipment,4
+3,Metals & Metal Products,30
+3,Minerals & Raw Materials,23
+3,Precious Metals & Gems,12
+3,"Stone, Glass & Ceramics",2
+3,Textiles & Clothing,27
+3,Transport,16
+3,"Wood, Paper & Leather",13
+4,Agriculture & Food,47
+4,Arts & Antiques,1
+4,Chemicals,20
+4,Energy & Hydrocarbons,2
+4,Footwear & Headgear,4
+4,Furniture & Misc,9
+4,Instruments & Optics,14
+4,Machinery & Equipment,35
+4,Metals & Metal Products,20
+4,Minerals & Raw Materials,7
+4,Plastics & Rubber,12
+4,Precious Metals & Gems,2
+4,"Stone, Glass & Ceramics",10
+4,Textiles & Clothing,28
+4,Transport,6
+4,"Wood, Paper & Leather",15

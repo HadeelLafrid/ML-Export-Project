@@ -215,3 +215,4 @@ __marimo__/
 !data/res/evaluation/*.csv
 !data/res/classification_results.csv
 !data/res/algeria_export_forecast_2025_2027.csv
+!data/res/dashboard/*.csv
