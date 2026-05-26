@@ -66,6 +66,15 @@ alg_yearly = load_csv('algeria_yearly.csv')
 sector_demand_index = load_csv('sector_demand_index.csv')
 pca_sample = load_csv('pca_sample.csv')
 feature_corr = load_csv('feature_correlation.csv')
+<<<<<<< Updated upstream
+=======
+country_clusters = load_csv('country_clusters.csv')
+product_clusters = load_csv('product_clusters.csv')
+cluster_stats = load_csv('cluster_statistics.csv')
+cluster_sector_comp = load_csv('cluster_sector_composition.csv')
+forecast_data = load_csv('forecast_data.csv')
+classification_results = load_csv('classification_results.csv')
+>>>>>>> Stashed changes
 
 if not summary_stats.empty:
     stats_dict = dict(zip(summary_stats['metric'], summary_stats['value']))
@@ -520,6 +529,7 @@ def build_intelligence():
                     html.Small('Columns: importer, product, opportunity_label (High/Medium/Low)', style={'color': '#94a3b8', 'display': 'block', 'marginTop': '0.25rem'}),
                 ]),
             ]), xs=12, lg=6, className='mb-4'),
+<<<<<<< Updated upstream
             dbc.Col(html.Div(className='info-panel', children=[
                 html.H5('Integration Instructions'),
                 html.Ol(style={'paddingLeft': '1.1rem', 'fontSize': '0.85rem', 'lineHeight': '2'}, children=[
@@ -532,23 +542,174 @@ def build_intelligence():
             ]), xs=12, lg=6, className='mb-4'),
         ]),
     ])
+=======
+        ]))
 
+    children.append(sec('Classification'))
+
+    if not classification_results.empty:
+        # ── Show actual classification results ────────────────────────
+        label_counts = classification_results['opportunity_label'].value_counts()
+        total        = len(classification_results)
+
+        # Summary cards
+        cards = dbc.Row([
+            dbc.Col(dbc.Card(dbc.CardBody([
+                html.Div('High Opportunities', className='kpi-label'),
+                html.Div(f"{label_counts.get('High', 0):,}", className='kpi-value',
+                         style={'color': '#16a34a', 'fontSize': '1.8rem', 'fontWeight': 700}),
+                html.Div(f"{100*label_counts.get('High',0)/total:.1f}% of pairs",
+                         style={'color': '#64748b', 'fontSize': '0.8rem'}),
+            ])), xs=12, md=4, className='mb-3'),
+            dbc.Col(dbc.Card(dbc.CardBody([
+                html.Div('Medium Opportunities', className='kpi-label'),
+                html.Div(f"{label_counts.get('Medium', 0):,}", className='kpi-value',
+                         style={'color': '#ca8a04', 'fontSize': '1.8rem', 'fontWeight': 700}),
+                html.Div(f"{100*label_counts.get('Medium',0)/total:.1f}% of pairs",
+                         style={'color': '#64748b', 'fontSize': '0.8rem'}),
+            ])), xs=12, md=4, className='mb-3'),
+            dbc.Col(dbc.Card(dbc.CardBody([
+                html.Div('Low Opportunities', className='kpi-label'),
+                html.Div(f"{label_counts.get('Low', 0):,}", className='kpi-value',
+                         style={'color': '#dc2626', 'fontSize': '1.8rem', 'fontWeight': 700}),
+                html.Div(f"{100*label_counts.get('Low',0)/total:.1f}% of pairs",
+                         style={'color': '#64748b', 'fontSize': '0.8rem'}),
+            ])), xs=12, md=4, className='mb-3'),
+        ])
+
+        # Pie chart
+        label_df  = label_counts.reset_index()
+        label_df.columns = ['opportunity_label', 'count']
+        fig_pie   = px.pie(
+            label_df, values='count', names='opportunity_label',
+            title='Classification Results Distribution',
+            color='opportunity_label',
+            color_discrete_map=OPP_COLORS,
+        )
+        fig_pie.update_layout(
+            template='plotly_white',
+            margin=dict(t=40, b=10, l=10, r=10),
+        )
+
+        # Method info panel
+        info_panel = html.Div(className='info-panel', children=[
+            html.H5('Classification Methodology', style={'fontWeight': 700}),
+            html.P([
+                html.Strong('EPI Track: '),
+                'Random Forest classifier (F1-macro = 0.51) trained on 56 RCA products. ',
+                'Label defined as unrealized ITC Export Potential Indicator score.',
+            ], style={'fontSize': '0.85rem', 'color': '#475569'}),
+            html.P([
+                html.Strong('PDI Track: '),
+                'XGBoost classifier (F1-macro = 0.68) trained on 1,168 candidate products. ',
+                'Label defined using product space density × ease × demand.',
+            ], style={'fontSize': '0.85rem', 'color': '#475569'}),
+            html.P([
+                html.Strong('Leakage Fix: '),
+                'Original labeling achieved 100% accuracy due to target leakage. ',
+                'Replaced with ITC EPI/PDI methodology — honest performance confirmed.',
+            ], style={'fontSize': '0.85rem', 'color': '#475569'}),
+            html.Hr(),
+            html.P([
+                html.Strong('Total pairs classified: '),
+                f'{total:,} unique (importer, product) combinations',
+            ], style={'fontSize': '0.85rem', 'color': '#475569', 'margin': 0}),
+        ])
+
+        children.append(cards)
+        children.append(dbc.Row([
+            dbc.Col(dbc.Card(dbc.CardBody([
+                dcc.Graph(figure=fig_pie, style={'height': '360px'}),
+            ])), xs=12, lg=6, className='mb-4'),
+            dbc.Col(info_panel, xs=12, lg=6, className='mb-4'),
+        ]))
+
+    else:
+        # ── Still pending ─────────────────────────────────────────────
+        children.append(dbc.Row([
+            dbc.Col(html.Div(className='info-panel', children=[
+                html.Div(className='pending-box',
+                         style={'borderLeft': '4px solid #1a56db', 'marginBottom': 0},
+                         children=[
+                    html.Div([
+                        html.Div(lucide('tag'), className='pending-icon',
+                                 style={'backgroundColor': '#e0f2fe', 'color': '#1a56db',
+                                        'borderRadius': '8px', 'width': '38px', 'height': '38px',
+                                        'display': 'flex', 'alignItems': 'center',
+                                        'justifyContent': 'center', 'flexShrink': 0}),
+                        html.Div([
+                            html.Strong('Classification Results', style={'fontSize': '0.9rem'}),
+                            html.P('Awaiting teammate integration.',
+                                   className='text-muted',
+                                   style={'fontSize': '0.8rem', 'margin': '0.2rem 0'}),
+                            html.Span('Pending', className='badge bg-warning'),
+                        ]),
+                    ], style={'display': 'flex', 'alignItems': 'flex-start'}),
+                    html.Hr(style={'margin': '0.75rem 0'}),
+                    html.Div([
+                        html.Small('Expected file: ', style={'color': '#64748b'}),
+                        html.Code('data/res/classification_results.csv',
+                                  style={'fontSize': '0.8rem'}),
+                    ]),
+                    html.Small('Columns: importer, product, opportunity_label (High/Medium/Low)',
+                               style={'color': '#94a3b8', 'display': 'block',
+                                      'marginTop': '0.25rem'}),
+                ]),
+            ]), xs=12, lg=6, className='mb-4'),
+            dbc.Col(html.Div(className='info-panel', children=[
+                html.H5('Integration Instructions'),
+                html.Ol(style={'paddingLeft': '1.1rem', 'fontSize': '0.85rem',
+                               'lineHeight': '2'}, children=[
+                    html.Li('Run your classification notebook to produce a CSV'),
+                    html.Li(['Save the file to ',
+                             html.Code('data/res/classification_results.csv')]),
+                    html.Li(['Re-run: ',
+                             html.Code('python dashboard/prepare_data.py')]),
+                    html.Li('Dashboard will automatically display your results'),
+                ]),
+            ]), xs=12, lg=6, className='mb-4'),
+        ]))
+
+    return html.Div(children)
+>>>>>>> Stashed changes
+
+
+# @app.callback(
+#     [Output('overview-content', 'style'),
+#      Output('explorer-content', 'style'),
+#      Output('forecasts-content', 'style'),
+#      Output('opportunities-content', 'style'),
+#      Output('intelligence-content', 'style'),
+#      Output('active-tab', 'data')],
+#     [Input('tabs', 'value')],
+# )
+# def switch_tab(tab_id):
+#     styles = {}
+#     for t in ['overview', 'explorer', 'forecasts', 'opportunities', 'intelligence']:
+#         styles[t] = {'display': 'block'} if t == tab_id else {'display': 'none'}
+#     return styles['overview'], styles['explorer'], styles['forecasts'], styles['opportunities'], styles['intelligence'], tab_id
 
 @app.callback(
     [Output('overview-content', 'style'),
      Output('explorer-content', 'style'),
      Output('forecasts-content', 'style'),
      Output('opportunities-content', 'style'),
+     Output('intelligence-content', 'children'),
      Output('intelligence-content', 'style'),
      Output('active-tab', 'data')],
     [Input('tabs', 'value')],
 )
 def switch_tab(tab_id):
     styles = {}
-    for t in ['overview', 'explorer', 'forecasts', 'opportunities', 'intelligence']:
+    for t in ['overview', 'explorer', 'forecasts', 'opportunities']:
         styles[t] = {'display': 'block'} if t == tab_id else {'display': 'none'}
-    return styles['overview'], styles['explorer'], styles['forecasts'], styles['opportunities'], styles['intelligence'], tab_id
+    intel_style = {'display': 'block'} if tab_id == 'intelligence' else {'display': 'none'}
 
+    # Rebuild intelligence content fresh every time tab is clicked
+    intel_children = build_intelligence().children if tab_id == 'intelligence' else []
+
+    return (styles['overview'], styles['explorer'], styles['forecasts'],
+            styles['opportunities'], intel_children, intel_style, tab_id)
 
 def build_ex_trend(yr, sector, cont):
     data = agg_year_sector_continent.copy()

@@ -1,0 +1,43 @@
+Here is exactly what to tell your colleague:
+
+Message to Your Colleague
+
+Subject: Classification Integration — Work Complete, Dashboard Fix Needed
+
+What Was Done
+The classification notebook is complete and produces data/res/classification_results.csv with 66,934 rows in the exact format specified in the integration guide:
+importer  |  product  |  opportunity_label
+──────────┼───────────┼───────────────────
+int64     |  int64    |  'High'/'Medium'/'Low'
+Validation passes completely:
+Valid — 66,934 rows
+Labels: {'Medium': 29637, 'High': 23606, 'Low': 13691}
+
+What Was Implemented in the Dashboard
+1. prepare_data.py — added classification section:
+The file did not have any classification code. Added this block before the Forecast Data section:
+pythonprint("\n--- Classification Data ---")
+CLASSIFICATION_CSV = RES_DIR / 'classification_results.csv'
+if CLASSIFICATION_CSV.exists():
+    cf = pd.read_csv(CLASSIFICATION_CSV)
+    cf.to_csv(DASH_DIR / 'classification_results.csv', index=False)
+    print(f"  classification_results.csv found — {len(cf):,} rows copied to dashboard")
+    label_dist = cf['opportunity_label'].value_counts().to_dict()
+    print(f"  Label distribution: {label_dist}")
+else:
+    print(f"  classification_results.csv NOT FOUND")
+2. app.py — replaced Pending badge with actual results display:
+Line 76 — added:
+pythonclassification_results = load_csv('classification_results.csv')
+Lines 625-748 — replaced the hardcoded Pending badge with conditional logic:
+pythonif not classification_results.empty:
+    # shows KPI cards + pie chart + methodology panel
+else:
+    # shows Pending badge
+
+The Remaining Problem
+The file loads correctly — confirmed by diagnostic:
+classification_results.csv: exists=True, size=1035501
+loaded 66934 rows, empty=False
+Dashboard will show: RESULTS  ← file is correct
+But the Intelligence tab still shows Pending.

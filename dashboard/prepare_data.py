@@ -221,3 +221,15 @@ for f in ['comparison_task1.csv', 'comparison_task2.csv']:
 
 print("\n✓ All dashboard data prepared.")
 print(f"  Output: {DASH_DIR}")
+
+print("\n--- Classification Data ---")
+CLASSIFICATION_CSV = RES_DIR / 'classification_results.csv'
+if CLASSIFICATION_CSV.exists():
+    cf = pd.read_csv(CLASSIFICATION_CSV)
+    cf.to_csv(DASH_DIR / 'classification_results.csv', index=False)
+    print(f"  classification_results.csv found — {len(cf):,} rows copied to dashboard")
+    label_dist = cf['opportunity_label'].value_counts().to_dict()
+    print(f"  Label distribution: {label_dist}")
+else:
+    print(f"  classification_results.csv NOT FOUND")
+    print(f"  Expected at: {CLASSIFICATION_CSV}")
