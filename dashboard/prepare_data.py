@@ -219,6 +219,56 @@ for f in ['comparison_task1.csv', 'comparison_task2.csv']:
         shutil.copy(src, dst)
         print(f"  Copied {f}")
 
+print("\n--- Clustering ---")
+COUNTRY_OUT = Path(__file__).resolve().parent.parent / 'outputs' / 'country_cluster_profiles.csv'
+PRODUCT_OUT = Path(__file__).resolve().parent.parent / 'outputs' / 'product_cluster_profiles.csv'
+
+if COUNTRY_OUT.exists() and PRODUCT_OUT.exists():
+    country_df = pd.read_csv(COUNTRY_OUT)
+    product_df = pd.read_csv(PRODUCT_OUT)
+
+    pc_cols = [f'PC{i}' for i in range(1, 17)]
+    country_out = country_df[['importer'] + pc_cols + ['country_cluster']]
+    country_out.to_csv(DASH_DIR / 'country_clusters.csv', index=False)
+    print(f"  country_clusters: {len(country_out)} rows, K={country_out['country_cluster'].nunique()}")
+
+    product_out = product_df[['product', 'sector'] + pc_cols + ['product_cluster']]
+    product_out.to_csv(DASH_DIR / 'product_clusters.csv', index=False)
+    print(f"  product_clusters: {len(product_out)} rows, K={product_out['product_cluster'].nunique()}")
+
+    sector_comp = product_df.groupby(['product_cluster', 'sector']).size().reset_index(name='count')
+    sector_comp.to_csv(DASH_DIR / 'cluster_sector_composition.csv', index=False)
+    print(f"  cluster_sector_composition: {len(sector_comp)} rows")
+
+    cluster_descriptions = {
+        'country': ['Mature Markets', 'Emerging Hubs', 'High-Potential', 'Resource-Driven',
+                     'Gateway Economies', 'Small Open', 'Frontier Markets', 'Global Anchors'],
+        'product': ['Low-Value Commodities', 'High-Value Specialised', 'Strategic Commodities',
+                    'Light Manufacturing', 'Intermediate Goods'],
+    }
+    stats_rows = []
+    for cid in range(country_out['country_cluster'].nunique()):
+        cnt = len(country_out[country_out['country_cluster'] == cid])
+        stats_rows.append({'type': 'country', 'cluster_id': cid,
+                           'count': cnt, 'description': cluster_descriptions['country'][cid]})
+    for cid in range(product_out['product_cluster'].nunique()):
+        cnt = len(product_out[product_out['product_cluster'] == cid])
+        stats_rows.append({'type': 'product', 'cluster_id': cid,
+                           'count': cnt, 'description': cluster_descriptions['product'][cid]})
+    pd.DataFrame(stats_rows).to_csv(DASH_DIR / 'cluster_statistics.csv', index=False)
+    print(f"  cluster_statistics: {len(stats_rows)} rows")
+else:
+    print("  Cluster output CSVs not found — run clustering_notebook.ipynb first")
+
+print("\n--- Forecast Data ---")
+FORECAST_CSV = RES_DIR / 'algeria_export_forecast_2025_2027.csv'
+if FORECAST_CSV.exists():
+    dst = DASH_DIR / 'forecast_data.csv'
+    shutil.copy(FORECAST_CSV, dst)
+    print(f"  Copied forecast data ({FORECAST_CSV.stat().st_size / 1024:.0f} KB)")
+else:
+    print("  No forecast data found — run full_forecasting.ipynb first")
+
 print("\n✓ All dashboard data prepared.")
 print(f"  Output: {DASH_DIR}")
 

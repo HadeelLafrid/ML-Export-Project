@@ -1,0 +1,14 @@
+type,cluster_id,count,description
+country,0,1,Mature Markets
+country,1,3,Emerging Hubs
+country,2,14,High-Potential
+country,3,4,Resource-Driven
+country,4,28,Gateway Economies
+country,5,4,Small Open
+country,6,10,Frontier Markets
+country,7,33,Global Anchors
+product,0,714,Low-Value Commodities
+product,1,52,High-Value Specialised
+product,2,9,Strategic Commodities
+product,3,217,Light Manufacturing
+product,4,232,Intermediate Goods
