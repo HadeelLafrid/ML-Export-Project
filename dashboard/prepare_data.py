@@ -115,6 +115,28 @@ opp_ranking = (
     .reset_index()
     .sort_values('demand_gap', ascending=False)
 )
+
+# Rename gap-derived column before merging classification
+opp_ranking.rename(columns={'opportunity': 'opportunity_gap'}, inplace=True)
+
+# Merge ML classification results side-by-side
+CLASSIFICATION_CSV = RES_DIR / 'classification_results.csv'
+if CLASSIFICATION_CSV.exists():
+    cf = pd.read_csv(CLASSIFICATION_CSV)
+    cf.rename(columns={'opportunity_label': 'opportunity_ml'}, inplace=True)
+    opp_ranking = opp_ranking.merge(
+        cf[['importer', 'product', 'opportunity_ml']],
+        on=['importer', 'product'], how='left'
+    )
+    # Fill Unknown with gap-derived label as fallback
+    opp_ranking['opportunity_ml'] = opp_ranking['opportunity_ml'].fillna(opp_ranking['opportunity_gap'])
+    print(f"  classification_results.csv merged — {len(cf):,} rows")
+    label_dist = opp_ranking['opportunity_ml'].value_counts().to_dict()
+    print(f"  ML label distribution: {label_dist}")
+else:
+    print(f"  classification_results.csv NOT FOUND — using gap-derived labels")
+    opp_ranking['opportunity_ml'] = opp_ranking['opportunity_gap']
+
 opp_ranking.to_csv(DASH_DIR / 'opportunity_ranking.csv', index=False)
 print(f"  opportunity_ranking: {len(opp_ranking)} rows")
 
@@ -137,7 +159,7 @@ summary = {
         str(df['product'].nunique()),
         str(df['sector'].nunique()),
         f"{int(df['year'].min())} - {int(df['year'].max())}",
-        str(len(df[df['opportunity'] == 'High'])),
+        f"{len(df[df['opportunity'] == 'High'])} (gap) / {len(opp_ranking[opp_ranking['opportunity_ml'] == 'High'])} (ML)",
         str(int(latest_year)),
     ]
 }
@@ -271,15 +293,3 @@ else:
 
 print("\n✓ All dashboard data prepared.")
 print(f"  Output: {DASH_DIR}")
-
-print("\n--- Classification Data ---")
-CLASSIFICATION_CSV = RES_DIR / 'classification_results.csv'
-if CLASSIFICATION_CSV.exists():
-    cf = pd.read_csv(CLASSIFICATION_CSV)
-    cf.to_csv(DASH_DIR / 'classification_results.csv', index=False)
-    print(f"  classification_results.csv found — {len(cf):,} rows copied to dashboard")
-    label_dist = cf['opportunity_label'].value_counts().to_dict()
-    print(f"  Label distribution: {label_dist}")
-else:
-    print(f"  classification_results.csv NOT FOUND")
-    print(f"  Expected at: {CLASSIFICATION_CSV}")

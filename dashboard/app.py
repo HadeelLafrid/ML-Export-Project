@@ -84,7 +84,7 @@ server = app.server
 
 NAV = dbc.Navbar(
     dbc.Container([
-        html.A('Algeria Export Intelligence', className='navbar-brand fw-bold fs-4', style={'color': '#fff'}),
+        html.A('Algeria Export Intelligence', className='navbar-brand fw-bold fs-4', style={'color': '#fff', 'flexShrink': '0'}),
         dcc.Tabs(id='tabs', value='overview', className='custom-tabs', children=[
             dcc.Tab(label='Overview', value='overview', className='custom-tab', selected_className='custom-tab--selected'),
             dcc.Tab(label='Trade Explorer', value='explorer', className='custom-tab', selected_className='custom-tab--selected'),
@@ -92,7 +92,7 @@ NAV = dbc.Navbar(
             dcc.Tab(label='Opportunities', value='opportunities', className='custom-tab', selected_className='custom-tab--selected'),
             dcc.Tab(label='Intelligence', value='intelligence', className='custom-tab', selected_className='custom-tab--selected'),
         ]),
-    ], style={'display': 'flex', 'flexWrap': 'wrap', 'alignItems': 'center'}),
+    ], style={'display': 'flex', 'flexWrap': 'wrap', 'alignItems': 'center', 'gap': '0.5rem'}),
     color='#1e293b', dark=True, className='mb-0', style={'padding': '0.5rem 0'},
 )
 
@@ -435,16 +435,26 @@ def build_opportunities():
                 ], xs=12, md=4),
             ]),
         ]) if not opp_ranking.empty else html.Div(),
-        sec('Top Export Opportunities'),
+        sec('Top Export Opportunities — Gap vs ML Labels'),
         dbc.Row([
             dbc.Col(dbc.Card(dbc.CardBody([
                 html.Div(id='opp-table-container'),
-            ]), className=''), xs=12, lg=8, className='mb-4'),
-            dbc.Col(dbc.Card(dbc.CardBody([
-                dcc.Graph(id='opp-dist-chart', style={'height': '380px'}),
-            ]), className=''), xs=12, lg=4, className='mb-4'),
+            ]), className=''), xs=12, lg=12, className='mb-4'),
         ]),
-        sec('Opportunity Breakdown'),
+        sec('Label Distribution Comparison'),
+        dbc.Row([
+            dbc.Col(dbc.Card(dbc.CardBody([
+                dcc.Graph(id='opp-gap-chart', style={'height': '340px'}),
+            ]), className=''), xs=12, md=6, className='mb-4'),
+            dbc.Col(dbc.Card(dbc.CardBody([
+                dcc.Graph(id='opp-ml-chart', style={'height': '340px'}),
+            ]), className=''), xs=12, md=6, className='mb-4'),
+        ]),
+        sec('Agreement Analysis'),
+        dbc.Row([
+            dbc.Col(html.Div(id='opp-agreement-card', className='info-panel'), xs=12, className='mb-4'),
+        ]),
+        sec('Opportunity Breakdown (ML Labels)'),
         dbc.Row([
             dbc.Col(dbc.Card(dbc.CardBody([
                 dcc.Graph(id='opp-sector-chart', style={'height': '420px'}),
@@ -622,36 +632,71 @@ def build_intelligence():
         ]))
 
     children.append(sec('Classification'))
-    children.append(dbc.Row([
-        dbc.Col(html.Div(className='info-panel', children=[
-            html.Div(className='pending-box', style={'borderLeft': '4px solid #1a56db', 'marginBottom': 0}, children=[
+    has_ml = 'opportunity_ml' in opp_ranking.columns
+    if has_ml and not opp_ranking.empty:
+        total = len(opp_ranking)
+        ml_dist = opp_ranking['opportunity_ml'].value_counts().to_dict()
+        gap_dist = opp_ranking['opportunity_gap'].value_counts().to_dict()
+        classification_pairs = total - ml_dist.get('Unknown', 0)
+        children.append(dbc.Row([
+            dbc.Col(html.Div(className='info-panel', children=[
+                html.H5('Classification Results — Integrated', style={'fontSize': '0.9rem', 'fontWeight': 700}),
+                html.P(f'ML labels available for {classification_pairs:,} of {total:,} (importer, product) pairs. '
+                       f'Remaining {total - classification_pairs:,} pairs fall back to gap-derived labels.',
+                       className='text-muted', style={'fontSize': '0.85rem'}),
+                html.Hr(style={'margin': '0.5rem 0'}),
                 html.Div([
-                    html.Div(lucide('tag'), className='pending-icon', style={'backgroundColor': '#e0f2fe', 'color': '#1a56db', 'borderRadius': '8px', 'width': '38px', 'height': '38px', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center', 'flexShrink': 0}),
-                    html.Div([
-                        html.Strong('Classification Results', style={'fontSize': '0.9rem'}),
-                        html.P('Awaiting teammate integration.', className='text-muted', style={'fontSize': '0.8rem', 'margin': '0.2rem 0'}),
-                        html.Span('Pending', className='badge bg-warning'),
-                    ]),
-                ], style={'display': 'flex', 'alignItems': 'flex-start'}),
-                html.Hr(style={'margin': '0.75rem 0'}),
-                html.Div([
-                    html.Small('Expected file: ', style={'color': '#64748b'}),
-                    html.Code('data/res/classification_results.csv', style={'fontSize': '0.8rem'}),
+                    html.Span('ML Distribution: ', style={'fontWeight': 600, 'fontSize': '0.85rem'}),
+                    html.Span(f'High: {ml_dist.get("High", 0):,}  |  Medium: {ml_dist.get("Medium", 0):,}  |  Low: {ml_dist.get("Low", 0):,}',
+                              style={'fontSize': '0.85rem', 'color': '#475569'}),
                 ]),
-                html.Small('Columns: importer, product, opportunity_label (High/Medium/Low)', style={'color': '#94a3b8', 'display': 'block', 'marginTop': '0.25rem'}),
-            ]),
-        ]), xs=12, lg=6, className='mb-4'),
-        dbc.Col(html.Div(className='info-panel', children=[
-            html.H5('Integration Instructions'),
-            html.Ol(style={'paddingLeft': '1.1rem', 'fontSize': '0.85rem', 'lineHeight': '2'}, children=[
-                html.Li('Run your classification notebook to produce a CSV with predictions'),
-                html.Li(['Save the file to ', html.Code('data/res/classification_results.csv')]),
-                html.Li(['Re-run: ', html.Code('python dashboard/prepare_data.py')]),
-                html.Li('The dashboard will automatically display your classification results alongside clustering'),
-            ]),
-            html.P(['See ', html.Code('dashboard/INTEGRATION_GUIDE.md'), ' for detailed format specifications.'], className='text-muted mt-2', style={'fontSize': '0.8rem'}),
-        ]), xs=12, lg=6, className='mb-4'),
-    ]))
+                html.Div([
+                    html.Span('Gap-Derived Distribution: ', style={'fontWeight': 600, 'fontSize': '0.85rem'}),
+                    html.Span(f'High: {gap_dist.get("High", 0):,}  |  Medium: {gap_dist.get("Medium", 0):,}  |  Low: {gap_dist.get("Low", 0):,}',
+                              style={'fontSize': '0.85rem', 'color': '#475569'}),
+                ], style={'marginTop': '0.25rem'}),
+            ]), xs=12, lg=6, className='mb-4'),
+            dbc.Col(html.Div(className='info-panel', children=[
+                html.H5('How It Works', style={'fontSize': '0.9rem', 'fontWeight': 700}),
+                html.P('The Opportunities tab shows both classification methods side by side:', className='text-muted', style={'fontSize': '0.85rem'}),
+                html.Ul(style={'paddingLeft': '1.1rem', 'fontSize': '0.85rem', 'lineHeight': '1.8'}, children=[
+                    html.Li([html.Strong('Gap-Derived: '), 'Rule-based — demand_gap thresholds from feature engineering']),
+                    html.Li([html.Strong('ML-Based: '), 'Teammate\'s classification model predictions']),
+                    html.Li([html.Strong('Fallback: '), 'Pairs without ML predictions use the gap-derived label']),
+                ]),
+            ]), xs=12, lg=6, className='mb-4'),
+        ]))
+    else:
+        children.append(dbc.Row([
+            dbc.Col(html.Div(className='info-panel', children=[
+                html.Div(className='pending-box', style={'borderLeft': '4px solid #1a56db', 'marginBottom': 0}, children=[
+                    html.Div([
+                        html.Div(lucide('tag'), className='pending-icon', style={'backgroundColor': '#e0f2fe', 'color': '#1a56db', 'borderRadius': '8px', 'width': '38px', 'height': '38px', 'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center', 'flexShrink': 0}),
+                        html.Div([
+                            html.Strong('Classification Results', style={'fontSize': '0.9rem'}),
+                            html.P('Awaiting teammate integration.', className='text-muted', style={'fontSize': '0.8rem', 'margin': '0.2rem 0'}),
+                            html.Span('Pending', className='badge bg-warning'),
+                        ]),
+                    ], style={'display': 'flex', 'alignItems': 'flex-start'}),
+                    html.Hr(style={'margin': '0.75rem 0'}),
+                    html.Div([
+                        html.Small('Expected file: ', style={'color': '#64748b'}),
+                        html.Code('data/res/classification_results.csv', style={'fontSize': '0.8rem'}),
+                    ]),
+                    html.Small('Columns: importer, product, opportunity_label (High/Medium/Low)', style={'color': '#94a3b8', 'display': 'block', 'marginTop': '0.25rem'}),
+                ]),
+            ]), xs=12, lg=6, className='mb-4'),
+            dbc.Col(html.Div(className='info-panel', children=[
+                html.H5('Integration Instructions'),
+                html.Ol(style={'paddingLeft': '1.1rem', 'fontSize': '0.85rem', 'lineHeight': '2'}, children=[
+                    html.Li('Run your classification notebook to produce a CSV with predictions'),
+                    html.Li(['Save the file to ', html.Code('data/res/classification_results.csv')]),
+                    html.Li(['Re-run: ', html.Code('python dashboard/prepare_data.py')]),
+                    html.Li('The dashboard will automatically display your classification results alongside clustering'),
+                ]),
+                html.P(['See ', html.Code('dashboard/INTEGRATION_GUIDE.md'), ' for detailed format specifications.'], className='text-muted mt-2', style={'fontSize': '0.8rem'}),
+            ]), xs=12, lg=6, className='mb-4'),
+        ]))
 
     return html.Div(children)
 
@@ -766,7 +811,9 @@ def update_explorer(yr, sector, cont):
 
 @app.callback(
     [Output('opp-table-container', 'children'),
-     Output('opp-dist-chart', 'figure'),
+     Output('opp-gap-chart', 'figure'),
+     Output('opp-ml-chart', 'figure'),
+     Output('opp-agreement-card', 'children'),
      Output('opp-sector-chart', 'figure'),
      Output('opp-continent-chart', 'figure')],
     [Input('opp-filter', 'value'),
@@ -775,13 +822,16 @@ def update_explorer(yr, sector, cont):
 )
 def update_opportunities(opp_level, sector, top_n):
     if opp_ranking.empty:
-        return html.P('No opportunity data available. Run forecasting notebooks first.', className='text-muted'), go.Figure(), go.Figure(), go.Figure()
+        return (html.P('No opportunity data available.', className='text-muted'),
+                go.Figure(), go.Figure(), html.Div(), go.Figure(), go.Figure())
 
     data = opp_ranking.copy()
     if opp_level != 'ALL':
-        data = data[data['opportunity'] == opp_level]
+        data = data[(data['opportunity_gap'] == opp_level) | (data['opportunity_ml'] == opp_level)]
     if sector != 'ALL':
         data = data[data['sector'] == sector]
+
+    chart_data = data.copy()
     data = data.head(top_n)
 
     table = dash_table.DataTable(
@@ -790,38 +840,61 @@ def update_opportunities(opp_level, sector, top_n):
             {'name': 'Product', 'id': 'product_name'},
             {'name': 'Sector', 'id': 'sector'},
             {'name': 'Demand Gap (USD)', 'id': 'demand_gap', 'type': 'numeric', 'format': {'specifier': '$.2s'}},
-            {'name': 'Opportunity', 'id': 'opportunity'},
+            {'name': 'Gap-Derived', 'id': 'opportunity_gap'},
+            {'name': 'ML-Based', 'id': 'opportunity_ml'},
         ],
         data=data.to_dict('records'),
         style_table={'overflowX': 'auto'},
         style_header={'backgroundColor': '#1e293b', 'color': 'white', 'fontWeight': 600},
         style_cell={'textAlign': 'left', 'padding': '6px', 'fontSize': '0.8rem'},
         style_data_conditional=[
-            {'if': {'filter_query': '{opportunity} = "High"', 'column_id': 'opportunity'}, 'color': '#16a34a', 'fontWeight': 700},
-            {'if': {'filter_query': '{opportunity} = "Low"', 'column_id': 'opportunity'}, 'color': '#dc2626'},
+            {'if': {'filter_query': '{opportunity_gap} = "High"', 'column_id': 'opportunity_gap'}, 'color': '#16a34a', 'fontWeight': 700},
+            {'if': {'filter_query': '{opportunity_gap} = "Low"', 'column_id': 'opportunity_gap'}, 'color': '#dc2626'},
+            {'if': {'filter_query': '{opportunity_ml} = "High"', 'column_id': 'opportunity_ml'}, 'color': '#16a34a', 'fontWeight': 700},
+            {'if': {'filter_query': '{opportunity_ml} = "Low"', 'column_id': 'opportunity_ml'}, 'color': '#dc2626'},
         ],
         page_size=15,
     )
 
-    opp_counts = opp_ranking['opportunity'].value_counts().reset_index()
-    opp_counts.columns = ['opportunity', 'count']
-    fig_dist = px.pie(opp_counts, values='count', names='opportunity', title='Opportunity Distribution',
-                      color='opportunity', color_discrete_map=OPP_COLORS)
-    fig_dist.update_layout(template='plotly_white', margin=dict(t=40, b=10, l=10, r=10))
+    # Gap-derived pie
+    gap_counts = data['opportunity_gap'].value_counts().reset_index()
+    gap_counts.columns = ['opportunity', 'count']
+    fig_gap = px.pie(gap_counts, values='count', names='opportunity', title='Gap-Derived Labels',
+                     color='opportunity', color_discrete_map=OPP_COLORS)
+    fig_gap.update_layout(template='plotly_white', margin=dict(t=40, b=10, l=10, r=10))
 
-    sec_counts = opp_ranking.groupby(['sector', 'opportunity']).size().reset_index(name='count')
-    fig_sec = px.bar(sec_counts, x='sector', y='count', color='opportunity', title='Opportunities by Sector',
+    # ML-based pie
+    ml_counts = data['opportunity_ml'].value_counts().reset_index()
+    ml_counts.columns = ['opportunity', 'count']
+    fig_ml = px.pie(ml_counts, values='count', names='opportunity', title='ML-Based Labels',
+                    color='opportunity', color_discrete_map=OPP_COLORS)
+    fig_ml.update_layout(template='plotly_white', margin=dict(t=40, b=10, l=10, r=10))
+
+    # Method comparison note
+    agree_card = html.Div([
+        html.H5('Method Comparison', className='fw-bold', style={'fontSize': '0.9rem'}),
+        html.P('Both methods are shown side-by-side for each (importer, product) pair above.',
+               className='text-muted', style={'fontSize': '0.85rem'}),
+        html.Ul(style={'paddingLeft': '1.1rem', 'fontSize': '0.85rem', 'lineHeight': '1.8'}, children=[
+            html.Li([html.Strong('Gap-Derived: '), 'Rule-based — demand_gap thresholds from feature engineering']),
+            html.Li([html.Strong('ML-Based: '), 'Teammate\'s classification model predictions (Unknown pairs fall back to gap-derived label)']),
+        ]),
+    ])
+
+    # Sector/continent breakdown (use ML labels, full filtered data)
+    sec_counts = chart_data.groupby(['sector', 'opportunity_ml']).size().reset_index(name='count')
+    fig_sec = px.bar(sec_counts, x='sector', y='count', color='opportunity_ml', title='Opportunities by Sector (ML)',
                      color_discrete_map=OPP_COLORS, barmode='stack',
-                     labels={'sector': '', 'count': 'Number of Pairs', 'opportunity': ''})
+                     labels={'sector': '', 'count': 'Number of Pairs', 'opportunity_ml': ''})
     fig_sec.update_layout(template='plotly_white', margin=dict(t=40, b=80, l=10, r=10), xaxis_tickangle=-45)
 
-    cont_counts = opp_ranking.groupby(['continent', 'opportunity']).size().reset_index(name='count')
-    fig_cont = px.bar(cont_counts, x='continent', y='count', color='opportunity', title='Opportunities by Continent',
+    cont_counts = chart_data.groupby(['continent', 'opportunity_ml']).size().reset_index(name='count')
+    fig_cont = px.bar(cont_counts, x='continent', y='count', color='opportunity_ml', title='Opportunities by Continent (ML)',
                       color_discrete_map=OPP_COLORS, barmode='stack',
-                      labels={'continent': '', 'count': 'Number of Pairs', 'opportunity': ''})
+                      labels={'continent': '', 'count': 'Number of Pairs', 'opportunity_ml': ''})
     fig_cont.update_layout(template='plotly_white', margin=dict(t=40, b=10, l=10, r=10))
 
-    return table, fig_dist, fig_sec, fig_cont
+    return table, fig_gap, fig_ml, agree_card, fig_sec, fig_cont
 
 
 overview_content = build_overview()
