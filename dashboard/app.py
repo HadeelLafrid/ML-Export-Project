@@ -12,6 +12,9 @@ import plotly.graph_objects as go
 from dash import Dash, dcc, html, Input, Output, dash_table
 import dash_bootstrap_components as dbc
 
+print("RUNNING FILE:", __file__)
+print("ABS PATH:", os.path.abspath(__file__))
+
 DASH_DIR = os.path.join(os.path.dirname(__file__), '..', 'data', 'res', 'dashboard')
 
 def lucide(name):
@@ -639,30 +642,97 @@ def build_intelligence():
         gap_dist = opp_ranking['opportunity_gap'].value_counts().to_dict()
         classification_pairs = total - ml_dist.get('Unknown', 0)
         children.append(dbc.Row([
+            # ── Left panel: KPI cards + comparison ───────────────────
             dbc.Col(html.Div(className='info-panel', children=[
-                html.H5('Classification Results — Integrated', style={'fontSize': '0.9rem', 'fontWeight': 700}),
-                html.P(f'ML labels available for {classification_pairs:,} of {total:,} (importer, product) pairs. '
-                       f'Remaining {total - classification_pairs:,} pairs fall back to gap-derived labels.',
-                       className='text-muted', style={'fontSize': '0.85rem'}),
-                html.Hr(style={'margin': '0.5rem 0'}),
-                html.Div([
-                    html.Span('ML Distribution: ', style={'fontWeight': 600, 'fontSize': '0.85rem'}),
-                    html.Span(f'High: {ml_dist.get("High", 0):,}  |  Medium: {ml_dist.get("Medium", 0):,}  |  Low: {ml_dist.get("Low", 0):,}',
-                              style={'fontSize': '0.85rem', 'color': '#475569'}),
-                ]),
-                html.Div([
-                    html.Span('Gap-Derived Distribution: ', style={'fontWeight': 600, 'fontSize': '0.85rem'}),
-                    html.Span(f'High: {gap_dist.get("High", 0):,}  |  Medium: {gap_dist.get("Medium", 0):,}  |  Low: {gap_dist.get("Low", 0):,}',
-                              style={'fontSize': '0.85rem', 'color': '#475569'}),
-                ], style={'marginTop': '0.25rem'}),
+                html.H5('Classification Results — ML vs Gap-Derived',
+                        style={'fontSize': '0.95rem', 'fontWeight': 700,
+                               'marginBottom': '1rem'}),
+
+                # Three KPI cards
+                dbc.Row([
+                    dbc.Col(html.Div(style={
+                        'background': '#f0fdf4', 'borderRadius': '8px',
+                        'padding': '0.75rem', 'textAlign': 'center',
+                        'border': '1px solid #bbf7d0'}, children=[
+                        html.Div('High', style={'fontSize': '0.75rem',
+                                 'color': '#16a34a', 'fontWeight': 600}),
+                        html.Div(f"{ml_dist.get('High', 0):,}",
+                                 style={'fontSize': '1.4rem', 'fontWeight': 700,
+                                        'color': '#15803d'}),
+                        html.Div(f"{100*ml_dist.get('High',0)/total:.1f}%",
+                                 style={'fontSize': '0.75rem', 'color': '#64748b'}),
+                    ]), width=4),
+                    dbc.Col(html.Div(style={
+                        'background': '#fefce8', 'borderRadius': '8px',
+                        'padding': '0.75rem', 'textAlign': 'center',
+                        'border': '1px solid #fde68a'}, children=[
+                        html.Div('Medium', style={'fontSize': '0.75rem',
+                                 'color': '#ca8a04', 'fontWeight': 600}),
+                        html.Div(f"{ml_dist.get('Medium', 0):,}",
+                                 style={'fontSize': '1.4rem', 'fontWeight': 700,
+                                        'color': '#a16207'}),
+                        html.Div(f"{100*ml_dist.get('Medium',0)/total:.1f}%",
+                                 style={'fontSize': '0.75rem', 'color': '#64748b'}),
+                    ]), width=4),
+                    dbc.Col(html.Div(style={
+                        'background': '#fef2f2', 'borderRadius': '8px',
+                        'padding': '0.75rem', 'textAlign': 'center',
+                        'border': '1px solid #fecaca'}, children=[
+                        html.Div('Low', style={'fontSize': '0.75rem',
+                                 'color': '#dc2626', 'fontWeight': 600}),
+                        html.Div(f"{ml_dist.get('Low', 0):,}",
+                                 style={'fontSize': '1.4rem', 'fontWeight': 700,
+                                        'color': '#b91c1c'}),
+                        html.Div(f"{100*ml_dist.get('Low',0)/total:.1f}%",
+                                 style={'fontSize': '0.75rem', 'color': '#64748b'}),
+                    ]), width=4),
+                ], className='mb-3'),
+
+                html.Hr(style={'margin': '0.75rem 0'}),
+
+                # Coverage note
+                html.P([
+                    html.Strong(f'{classification_pairs:,}'),
+                    f' of {total:,} opportunity pairs classified by ML model. ',
+                    f'Remaining {total - classification_pairs:,} pairs use gap-derived fallback.',
+                ], style={'fontSize': '0.8rem', 'color': '#64748b', 'margin': 0}),
+
             ]), xs=12, lg=6, className='mb-4'),
+
+            # ── Right panel: methodology ──────────────────────────────
             dbc.Col(html.Div(className='info-panel', children=[
-                html.H5('How It Works', style={'fontSize': '0.9rem', 'fontWeight': 700}),
-                html.P('The Opportunities tab shows both classification methods side by side:', className='text-muted', style={'fontSize': '0.85rem'}),
-                html.Ul(style={'paddingLeft': '1.1rem', 'fontSize': '0.85rem', 'lineHeight': '1.8'}, children=[
-                    html.Li([html.Strong('Gap-Derived: '), 'Rule-based — demand_gap thresholds from feature engineering']),
-                    html.Li([html.Strong('ML-Based: '), 'Teammate\'s classification model predictions']),
-                    html.Li([html.Strong('Fallback: '), 'Pairs without ML predictions use the gap-derived label']),
+                html.H5('Methodology', style={'fontSize': '0.95rem',
+                         'fontWeight': 700, 'marginBottom': '1rem'}),
+                html.Div(style={'background': '#f8fafc', 'borderRadius': '8px',
+                                'padding': '0.75rem', 'marginBottom': '0.75rem',
+                                'borderLeft': '3px solid #16a34a'}, children=[
+                    html.Strong('EPI Track (Existing Products)',
+                                style={'fontSize': '0.85rem', 'color': '#15803d'}),
+                    html.P('Random Forest — F1-macro = 0.51',
+                           style={'fontSize': '0.8rem', 'color': '#475569',
+                                  'margin': '0.2rem 0 0 0'}),
+                    html.P('56 RCA products × all markets | Label: Unrealized ITC EPI potential',
+                           style={'fontSize': '0.75rem', 'color': '#94a3b8', 'margin': 0}),
+                ]),
+                html.Div(style={'background': '#f8fafc', 'borderRadius': '8px',
+                                'padding': '0.75rem', 'marginBottom': '0.75rem',
+                                'borderLeft': '3px solid #2563eb'}, children=[
+                    html.Strong('PDI Track (New Products)',
+                                style={'fontSize': '0.85rem', 'color': '#1d4ed8'}),
+                    html.P('XGBoost — F1-macro = 0.68',
+                           style={'fontSize': '0.8rem', 'color': '#475569',
+                                  'margin': '0.2rem 0 0 0'}),
+                    html.P('1,168 candidate products | Label: Product space density × demand',
+                           style={'fontSize': '0.75rem', 'color': '#94a3b8', 'margin': 0}),
+                ]),
+                html.Div(style={'background': '#fff7ed', 'borderRadius': '8px',
+                                'padding': '0.75rem',
+                                'borderLeft': '3px solid #ea580c'}, children=[
+                    html.Strong('Leakage Fix Applied',
+                                style={'fontSize': '0.85rem', 'color': '#c2410c'}),
+                    html.P('Original model: accuracy = 1.00 (confirmed data leakage). '
+                           'Replaced with ITC EPI/PDI methodology — honest generalizable results.',
+                           style={'fontSize': '0.75rem', 'color': '#94a3b8', 'margin': '0.2rem 0 0 0'}),
                 ]),
             ]), xs=12, lg=6, className='mb-4'),
         ]))
@@ -877,7 +947,7 @@ def update_opportunities(opp_level, sector, top_n):
                className='text-muted', style={'fontSize': '0.85rem'}),
         html.Ul(style={'paddingLeft': '1.1rem', 'fontSize': '0.85rem', 'lineHeight': '1.8'}, children=[
             html.Li([html.Strong('Gap-Derived: '), 'Rule-based — demand_gap thresholds from feature engineering']),
-            html.Li([html.Strong('ML-Based: '), 'Teammate\'s classification model predictions (Unknown pairs fall back to gap-derived label)']),
+            html.Li([html.Strong('ML-Based:'), 'Teammate\'s classification model predictions (Unknown pairs fall back to gap-derived label)']),
         ]),
     ])
 
@@ -916,6 +986,7 @@ app.layout = dbc.Container([
 ], fluid=True, style={'backgroundColor': '#f1f5f9', 'minHeight': '100vh', 'padding': 0})
 
 
+print (" thi sis me to confirm ")
 if __name__ == '__main__':
     import webbrowser
     webbrowser.open('http://127.0.0.1:8050')
