@@ -3,9 +3,6 @@
 
 > An end-to-end machine learning system to identify, analyze, and forecast international export opportunities for Algeria — combining clustering, classification, and forecasting into a unified decision-support dashboard.
 
-**ENSIA — Machine Learning Project | Spring 2025-2026**
-**Team:** Hadil, Ibtihal, Ilyas, Raouf, Ahmed
-
 ---
 
 ## Table of Contents
