@@ -22,7 +22,6 @@
 - [Key Results](#key-results)
 - [Installation](#installation)
 - [How to Run](#how-to-run)
-- [Team Contributions](#team-contributions)
 - [References](#references)
 
 ---
@@ -372,17 +371,6 @@ jupyter notebook notebooks/full_forecasting.ipynb
 
 ---
 
-## Team Contributions
-
-| Member | Role |
-|--------|------|
-| **Hadil** | Classification (EPI + PDI pipeline, leakage diagnosis, ITC methodology, dashboard integration) |
-| **Ibtihal** | Dashboard development (Plotly Dash, 5-tab architecture, prepare_data.py) |
-| **Ilyas** | Data collection, preprocessing, feature engineering, project lead |
-| **Raouf** | Clustering (K-Means, PCA, cluster interpretation) |
-| **Ahmed** | Forecasting (Prophet, LSTM, 2025–2027 projections) |
-
----
 
 ## Methodology References
 
